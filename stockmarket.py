@@ -12,6 +12,8 @@ from st_click_detector import click_detector
 # 5. Investment portfolio tracker: Allow users to input multiple stocks and return their portfolio's current worth. #H
 # 6. Add a news section to show the latest news related to the selected stock (you can use the news attribute of yfinance.Ticker). #H
 
+st.title("Stock Market Dashboard")
+
 # Create the images as a href elements with tickers as IDs
 def show_tickers():
     content = """
@@ -55,17 +57,63 @@ def show_plot(fig):
 # Main Streamlit app
 ticker = get_ticker()
 
+# Create two columns
+col1, col2 = st.columns([3, 2])
+
 # Every time something happens, Streamlit reruns the script so when an image is clicked, the script will rerun and the ticker will not be empty.
 if ticker != "":
     df = get_dataframe(ticker)
     fig = plot_candlestick(df, ticker)
-    show_plot(fig)
 
-    # Get key stock info (market cap and P/E ratio) to display 
-    info = yf.Ticker(ticker).info
-    market_cap = info.get("marketCap", "N/A")
-    pe_ratio = info.get("trailingPE", "N/A")
+    with col1:
+        show_plot(fig)
 
-    # Display info
-    st.write(f"**Market Cap:** {market_cap}")
-    st.write(f"**P/E Ratio:** {pe_ratio}")
+        # Get key stock info (market cap and P/E ratio) to display 
+        info = yf.Ticker(ticker).info
+        market_cap = info.get("marketCap", "N/A")
+        pe_ratio = info.get("trailingPE", "N/A")
+
+        # Display info
+        st.write(f"**Market Cap:** {market_cap}")
+        st.write(f"**P/E Ratio:** {pe_ratio}")
+
+else:
+    with col1:
+        st.write("Click a company logo to see its stock data.")
+
+with col2:
+        st.header("Investment Portfolio Tracker")
+
+        tickers_input = st.text_area(
+            "Enter stock tickers separated by commas (e.g. AAPL, MSFT, TSLA):"
+        )
+        shares_input = st.text_area(
+            "Enter corresponding number of shares separated by commas (e.g. 10, 5, 3):"
+        )
+
+        if tickers_input and shares_input:
+            tickers = [t.strip().upper() for t in tickers_input.split(",")]
+            try:
+                shares = [int(s.strip()) for s in shares_input.split(",")]
+            except ValueError:
+                st.error("Please enter valid integers for shares.")
+                shares = []
+
+            if len(tickers) != len(shares):
+                st.error("Number of tickers and shares must match!")
+            elif shares:
+                portfolio = {}
+                total_value = 0
+                for ticker_, share in zip(tickers, shares):
+                    stock = yf.Ticker(ticker_)
+                    price = stock.info.get("regularMarketPrice")
+                    if price is None:
+                        st.warning(f"Could not fetch price for {ticker_}")
+                        continue
+                    value = price * share
+                    portfolio[ticker_] = {"shares": share, "price": price, "value": value}
+                    total_value += value
+                
+                st.write(f"### Portfolio Value: ${total_value:,.2f}")
+                df_portfolio = pd.DataFrame.from_dict(portfolio, orient="index")
+                st.dataframe(df_portfolio)
