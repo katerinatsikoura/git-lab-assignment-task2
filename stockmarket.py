@@ -61,3 +61,11 @@ if ticker != "":
     fig = plot_candlestick(df, ticker)
     show_plot(fig)
 
+    # Get key stock info (market cap and P/E ratio) to display 
+    info = yf.Ticker(ticker).info
+    market_cap = info.get("marketCap", "N/A")
+    pe_ratio = info.get("trailingPE", "N/A")
+
+    # Display info
+    st.write(f"**Market Cap:** {market_cap}")
+    st.write(f"**P/E Ratio:** {pe_ratio}")
